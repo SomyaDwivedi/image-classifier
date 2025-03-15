@@ -1,7 +1,7 @@
 # Image Classifier using TensorFlow
 
 ## Introduction
-This project is a binary image classifier built using **TensorFlow** and **Keras** in a **WSL (Windows Subsystem for Linux) environment** with **VS Code**. The model classifies images into two categories: "Happy" and "Sad." 
+This project is a binary image classifier built using **TensorFlow** and **Keras** in a **WSL (Windows Subsystem for Linux) environment** with **VS Code**. The model classifies images into two categories: "Happy" and "Sad."
 
 ## Setup Instructions
 ### 1. Install WSL and VS Code
@@ -36,7 +36,7 @@ sudo apt install python3 python3-pip python3-venv -y
 ### 1. **Importing Required Libraries**
 ```python
 import tensorflow as tf
-import os 
+import os
 import cv2
 import imghdr
 import numpy as np
@@ -52,8 +52,8 @@ from matplotlib import pyplot as plt
 ### 2. **GPU Configuration**
 ```python
 gpus = tf.config.experimental.list_physical_devices('GPU')
-    for gpu in gpus:
-        tf.config.experimental.set_memory_growth(gpu, True)
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 ```
 - Lists available GPUs and enables memory growth to prevent TensorFlow from consuming all GPU memory.
 
@@ -61,19 +61,19 @@ gpus = tf.config.experimental.list_physical_devices('GPU')
 
 ### 3. **Preprocessing the Data**
 ```python
-data_dir = 'data' 
-image_exts = ['jpeg','jpg', 'bmp', 'png']
-for image_class in os.listdir(data_dir): 
+data_dir = 'data'
+image_exts = ['jpeg', 'jpg', 'bmp', 'png']
+for image_class in os.listdir(data_dir):
     for image in os.listdir(os.path.join(data_dir, image_class)):
         image_path = os.path.join(data_dir, image_class, image)
-        try: 
+        try:
             img = cv2.imread(image_path)
             tip = imghdr.what(image_path)
-            if tip not in image_exts: 
-                print('Image not in ext list {}'.format(image_path))
+            if tip not in image_exts:
+                print(f'Image not in ext list {image_path}')
                 os.remove(image_path)
-        except Exception as e: 
-            print('Issue with image {}'.format(image_path))
+        except Exception as e:
+            print(f'Issue with image {image_path}')
 ```
 - Reads images from `data/` and removes any non-image files.
 - Ensures only valid image formats (`jpeg, jpg, bmp, png`) are used.
@@ -83,7 +83,7 @@ for image_class in os.listdir(data_dir):
 ### 4. **Creating a TensorFlow Dataset**
 ```python
 data = tf.keras.utils.image_dataset_from_directory('data')
-data = data.map(lambda x,y: (x/255, y))
+data = data.map(lambda x, y: (x / 255, y))
 ```
 - Loads images into a **TensorFlow dataset**.
 - Normalizes pixel values to [0,1] range for better model performance.
@@ -92,12 +92,12 @@ data = data.map(lambda x,y: (x/255, y))
 
 ### 5. **Splitting Data into Training, Validation, and Test Sets**
 ```python
-train_size = int(len(data)*.7)
-val_size = int(len(data)*.2)
-test_size = int(len(data)*.1)
+train_size = int(len(data) * 0.7)
+val_size = int(len(data) * 0.2)
+test_size = int(len(data) * 0.1)
 train = data.take(train_size)
 val = data.skip(train_size).take(val_size)
-test = data.skip(train_size+val_size).take(test_size)
+test = data.skip(train_size + val_size).take(test_size)
 ```
 - **70%** Training, **20%** Validation, **10%** Testing.
 
@@ -108,16 +108,17 @@ test = data.skip(train_size+val_size).take(test_size)
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Dropout
 
-model = Sequential()
-model.add(Conv2D(16, (3,3), 1, activation='relu', input_shape=(256,256,3)))
-model.add(MaxPooling2D())
-model.add(Conv2D(32, (3,3), 1, activation='relu'))
-model.add(MaxPooling2D())
-model.add(Conv2D(16, (3,3), 1, activation='relu'))
-model.add(MaxPooling2D())
-model.add(Flatten())
-model.add(Dense(256, activation='relu'))
-model.add(Dense(1, activation='sigmoid'))
+model = Sequential([
+    Conv2D(16, (3,3), activation='relu', input_shape=(256,256,3)),
+    MaxPooling2D(),
+    Conv2D(32, (3,3), activation='relu'),
+    MaxPooling2D(),
+    Conv2D(16, (3,3), activation='relu'),
+    MaxPooling2D(),
+    Flatten(),
+    Dense(256, activation='relu'),
+    Dense(1, activation='sigmoid')
+])
 ```
 - Uses **Convolutional Layers** to extract features from images.
 - **MaxPooling** layers downsample images to reduce computation.
@@ -128,7 +129,7 @@ model.add(Dense(1, activation='sigmoid'))
 
 ### 7. **Compiling and Training the Model**
 ```python
-model.compile('adam', loss=tf.losses.BinaryCrossentropy(), metrics=['accuracy'])
+model.compile(optimizer='adam', loss=tf.losses.BinaryCrossentropy(), metrics=['accuracy'])
 logsdir = 'logs'
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logsdir)
 hist = model.fit(train, epochs=20, validation_data=val, callbacks=[tensorboard_callback])
@@ -156,13 +157,13 @@ from tensorflow.keras.metrics import Precision, Recall, BinaryAccuracy
 pre = Precision()
 re = Recall()
 acc = BinaryAccuracy()
-for batch in test.as_numpy_iterator(): 
+for batch in test.as_numpy_iterator():
     X, y = batch
     yhat = model.predict(X)
     pre.update_state(y, yhat)
     re.update_state(y, yhat)
     acc.update_state(y, yhat)
-print(pre.result(), re.result(), acc.result())
+print(pre.result().numpy(), re.result().numpy(), acc.result().numpy())
 ```
 - Computes **Precision, Recall, and Accuracy** for test data.
 
@@ -172,11 +173,8 @@ print(pre.result(), re.result(), acc.result())
 ```python
 img = cv2.imread('test_image.png')
 resize = tf.image.resize(img, (256,256))
-yhat = model.predict(np.expand_dims(resize/255, 0))
-if yhat > 0.5: 
-    print(f'Predicted class is Sad')
-else:
-    print(f'Predicted class is Happy')
+yhat = model.predict(np.expand_dims(resize / 255, 0))
+print(f'Predicted class is {"Sad" if yhat > 0.5 else "Happy"}')
 ```
 - Loads an image, resizes it, and predicts its class using the trained model.
 
