@@ -23,24 +23,13 @@ sudo apt install python3 python3-pip python3-venv -y
    ```
 2. **Upgrade pip and Install TensorFlow**:
    ```bash
-   pip install --upgrade pip
-   pip install tensorflow numpy opencv-python matplotlib
+   python3 -m pip install --upgrade pip
+   python3 -m pip install tensorflow numpy opencv-python matplotlib
    ```
 3. **Verify TensorFlow Installation**:
    ```bash
-   python -c "import tensorflow as tf; print(tf.__version__)"
+   python3 -c "import tensorflow as tf; print(tf.__version__)"
    ```
-4. **Check GPU Availability (Optional)**:
-   ```bash
-   python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
-   ```
-
-### 4. Run the Code
-```bash
-python image_classifier.py
-```
-
----
 
 ## Code Explanation
 
@@ -60,11 +49,11 @@ from matplotlib import pyplot as plt
 
 ---
 
-### 2. **GPU Configuration (Optional)**
+### 2. **GPU Configuration**
 ```python
-# gpus = tf.config.experimental.list_physical_devices('GPU')
-# for gpu in gpus: 
-#     tf.config.experimental.set_memory_growth(gpu, True)
+gpus = tf.config.experimental.list_physical_devices('GPU')
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
 ```
 - Lists available GPUs and enables memory growth to prevent TensorFlow from consuming all GPU memory.
 
