@@ -183,5 +183,5 @@ else:
 ---
 
 ## **Conclusion**
-This project implements an image classification model using TensorFlow in a WSL environment. It performs data preprocessing, builds a CNN, trains it, and evaluates its performance. The model successfully predicts images as either "Happy" or "Sad." 🚀
+This project implements an image classification model using TensorFlow in a WSL environment. It performs data preprocessing, builds a CNN, trains it, and evaluates its performance. The model successfully predicts images as either "Happy" or "Sad."
 
