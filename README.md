@@ -170,7 +170,7 @@ print(pre.result(), re.result(), acc.result())
 
 ### 10. **Making a Prediction**
 ```python
-img = cv2.imread('data/Happy Images/Successful-year.jpg')
+img = cv2.imread('test_image.png')
 resize = tf.image.resize(img, (256,256))
 yhat = model.predict(np.expand_dims(resize/255, 0))
 if yhat > 0.5: 
