@@ -1,39 +1,41 @@
-# Image Classifier using TensorFlow
+# Image Classification using TensorFlow and CNNs
 
-## Introduction
-This project is a binary image classifier built using **TensorFlow** and **Keras** in a **WSL (Windows Subsystem for Linux) environment** with **VS Code**. The model classifies images into two categories: "Happy" and "Sad."
+## Overview
+This project implements an image classifier using TensorFlow and Convolutional Neural Networks (CNNs). The classifier is trained to distinguish between two classes: "Happy" and "Sad" images.
 
-## Setup Instructions
-### 1. Install WSL and VS Code
-- Install **WSL** (Windows Subsystem for Linux) on Windows.
-- Install **VS Code** and the **WSL extension**.
-- Set up **Ubuntu** as your WSL distribution.
-
-### 2. Install Python and Virtual Environment
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install python3 python3-pip python3-venv -y
+## Project Structure
+```
+image-classifier/
+│-- data/                # Dataset folder (contains class subfolders with images)
+│-- models/              # Saved trained models
+│-- logs/                # TensorBoard logs
+│-- imageclassifier.py    # Main script for training and evaluation
+│-- test_image.png        # Sample image for inference
+│-- README.md             # Project documentation
 ```
 
-### 3. Install TensorFlow on WSL
-1. **Create a Virtual Environment**:
-   ```bash
-   python3 -m venv my_tf_env
-   source my_tf_env/bin/activate
-   ```
-2. **Upgrade pip and Install TensorFlow**:
-   ```bash
-   python3 -m pip install --upgrade pip
-   python3 -m pip install tensorflow numpy opencv-python matplotlib
-   ```
-3. **Verify TensorFlow Installation**:
-   ```bash
-   python3 -c "import tensorflow as tf; print(tf.__version__)"
-   ```
+## Installation
+Ensure you have the following dependencies installed:
+```bash
+python3 -m pip install tensorflow numpy matplotlib seaborn opencv-python scikit-learn
+```
+
+## Dataset Preparation
+The dataset should be structured as follows:
+```
+data/
+│-- Happy/
+│   ├── image1.jpg
+│   ├── image2.jpg
+│-- Sad/
+│   ├── image1.jpg
+│   ├── image2.jpg
+```
 
 ## Code Explanation
 
-### 1. **Importing Required Libraries**
+### 1. Importing Required Libraries
+The script imports necessary libraries such as TensorFlow, OpenCV, NumPy, and Matplotlib.
 ```python
 import tensorflow as tf
 import os
@@ -42,144 +44,146 @@ import imghdr
 import numpy as np
 from matplotlib import pyplot as plt
 ```
-- **TensorFlow**: Used for building and training the deep learning model.
-- **OpenCV (`cv2`)**: Used for image preprocessing.
-- **Matplotlib**: Used for visualization.
-- **NumPy**: Used for numerical computations.
 
----
-
-### 2. **GPU Configuration**
+### 2. Configuring GPU for TensorFlow
+This ensures that TensorFlow efficiently utilizes GPU resources.
 ```python
 gpus = tf.config.experimental.list_physical_devices('GPU')
-for gpu in gpus:
+for gpu in gpus: 
     tf.config.experimental.set_memory_growth(gpu, True)
 ```
-- Lists available GPUs and enables memory growth to prevent TensorFlow from consuming all GPU memory.
 
----
-
-### 3. **Preprocessing the Data**
+### 3. Loading and Filtering Dataset
+The script iterates through the dataset directory, loads images, and removes unsupported formats.
 ```python
 data_dir = 'data'
-image_exts = ['jpeg', 'jpg', 'bmp', 'png']
-for image_class in os.listdir(data_dir):
+image_exts = ['jpeg','jpg', 'bmp', 'png']
+for image_class in os.listdir(data_dir): 
     for image in os.listdir(os.path.join(data_dir, image_class)):
         image_path = os.path.join(data_dir, image_class, image)
         try:
             img = cv2.imread(image_path)
             tip = imghdr.what(image_path)
-            if tip not in image_exts:
-                print(f'Image not in ext list {image_path}')
+            if tip not in image_exts: 
+                print('Image not in ext list {}'.format(image_path))
                 os.remove(image_path)
-        except Exception as e:
-            print(f'Issue with image {image_path}')
+        except Exception as e: 
+            print('Issue with image {}'.format(image_path))
 ```
-- Reads images from `data/` and removes any non-image files.
-- Ensures only valid image formats (`jpeg, jpg, bmp, png`) are used.
 
----
-
-### 4. **Creating a TensorFlow Dataset**
+### 4. Creating TensorFlow Dataset
+A TensorFlow dataset is created from the directory.
 ```python
 data = tf.keras.utils.image_dataset_from_directory('data')
-data = data.map(lambda x, y: (x / 255, y))
 ```
-- Loads images into a **TensorFlow dataset**.
-- Normalizes pixel values to [0,1] range for better model performance.
 
----
-
-### 5. **Splitting Data into Training, Validation, and Test Sets**
+### 5. Visualizing a Few Images
+The script plots some sample images from the dataset.
 ```python
-train_size = int(len(data) * 0.7)
-val_size = int(len(data) * 0.2)
-test_size = int(len(data) * 0.1)
+data_iterator = data.as_numpy_iterator()
+batch = data_iterator.next()
+fig, ax = plt.subplots(ncols=4, figsize=(20,20))
+for idx, img in enumerate(batch[0][:4]):
+    ax[idx].imshow(img.astype(int))
+    ax[idx].title.set_text(batch[1][idx])
+```
+
+### 6. Normalizing Data
+The images are normalized to scale pixel values between 0 and 1.
+```python
+data = data.map(lambda x,y: (x/255, y))
+```
+
+### 7. Splitting Data into Train, Validation, and Test Sets
+```python
+train_size = int(len(data)*.7)
+val_size = int(len(data)*.2)
+test_size = int(len(data)*.1)
+
 train = data.take(train_size)
 val = data.skip(train_size).take(val_size)
-test = data.skip(train_size + val_size).take(test_size)
+test = data.skip(train_size+val_size).take(test_size)
 ```
-- **70%** Training, **20%** Validation, **10%** Testing.
 
----
-
-### 6. **Building the CNN Model**
+### 8. Building the CNN Model
+The model consists of convolutional, max-pooling, and dense layers.
 ```python
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Dropout
 
-model = Sequential([
-    Conv2D(16, (3,3), activation='relu', input_shape=(256,256,3)),
-    MaxPooling2D(),
-    Conv2D(32, (3,3), activation='relu'),
-    MaxPooling2D(),
-    Conv2D(16, (3,3), activation='relu'),
-    MaxPooling2D(),
-    Flatten(),
-    Dense(256, activation='relu'),
-    Dense(1, activation='sigmoid')
-])
+model = Sequential()
+model.add(Conv2D(16, (3,3), 1, activation='relu', input_shape=(256,256,3)))
+model.add(MaxPooling2D())
+model.add(Conv2D(32, (3,3), 1, activation='relu'))
+model.add(MaxPooling2D())
+model.add(Conv2D(16, (3,3), 1, activation='relu'))
+model.add(MaxPooling2D())
+model.add(Flatten())
+model.add(Dense(256, activation='relu'))
+model.add(Dense(2, activation='softmax'))
 ```
-- Uses **Convolutional Layers** to extract features from images.
-- **MaxPooling** layers downsample images to reduce computation.
-- **Dense layers** classify images into `Happy` or `Sad`.
-- **Sigmoid Activation** is used for binary classification.
 
----
-
-### 7. **Compiling and Training the Model**
+### 9. Compiling and Training the Model
+The model is compiled and trained for 20 epochs.
 ```python
-model.compile(optimizer='adam', loss=tf.losses.BinaryCrossentropy(), metrics=['accuracy'])
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 logsdir = 'logs'
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logsdir)
 hist = model.fit(train, epochs=20, validation_data=val, callbacks=[tensorboard_callback])
 ```
-- **Adam Optimizer** is used for efficient learning.
-- **Binary Crossentropy Loss** is used for binary classification.
-- **TensorBoard** is used for monitoring training performance.
 
----
-
-### 8. **Plotting Training Results**
+### 10. Plotting Accuracy and Loss Graphs
 ```python
 plt.plot(hist.history['loss'], label='loss')
 plt.plot(hist.history['val_loss'], label='val_loss')
 plt.legend()
 plt.show()
+plt.plot(hist.history['accuracy'], label='accuracy')
+plt.plot(hist.history['val_accuracy'], label='val_accuracy')
+plt.legend()
+plt.show()
 ```
-- Plots loss and accuracy trends to analyze model performance.
 
----
-
-### 9. **Evaluating the Model**
+### 11. Evaluating the Model
+Precision, recall, and accuracy are computed.
 ```python
 from tensorflow.keras.metrics import Precision, Recall, BinaryAccuracy
 pre = Precision()
 re = Recall()
 acc = BinaryAccuracy()
-for batch in test.as_numpy_iterator():
+for batch in test.as_numpy_iterator(): 
     X, y = batch
-    yhat = model.predict(X)
-    pre.update_state(y, yhat)
-    re.update_state(y, yhat)
-    acc.update_state(y, yhat)
-print(pre.result().numpy(), re.result().numpy(), acc.result().numpy())
+    yhat = model.predict(X) 
+    yhat_labels = np.argmax(yhat, axis=1) 
+    pre.update_state(y, yhat_labels)
+    re.update_state(y, yhat_labels)
+    acc.update_state(y, yhat_labels)
+print(f'Precision: {pre.result().numpy()}')
+print(f'Recall: {re.result().numpy()}')
+print(f'Accuracy: {acc.result().numpy()}')
 ```
-- Computes **Precision, Recall, and Accuracy** for test data.
 
----
-
-### 10. **Making a Prediction**
+### 12. Making Predictions on a New Image
 ```python
 img = cv2.imread('test_image.png')
 resize = tf.image.resize(img, (256,256))
-yhat = model.predict(np.expand_dims(resize / 255, 0))
-print(f'Predicted class is {"Sad" if yhat > 0.5 else "Happy"}')
+yhat = model.predict(np.expand_dims(resize/255, 0))
+print("Predicted class is Sad" if np.argmax(yhat) == 1 else "Predicted class is Happy")
 ```
-- Loads an image, resizes it, and predicts its class using the trained model.
 
----
+### 13. Generating a Confusion Matrix
+```python
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
 
-## **Conclusion**
-This project implements an image classification model using TensorFlow in a WSL environment. It performs data preprocessing, builds a CNN, trains it, and evaluates its performance. The model successfully predicts images as either "Happy" or "Sad."
+y_true = np.concatenate([y.numpy() for _, y in test_dataset])
+y_pred_probs = model.predict(test_dataset)
+y_pred = np.argmax(y_pred_probs, axis=1)
+cm = confusion_matrix(y_true, y_pred)
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+plt.show()
+```
+
+## Author
+Developed by Somya Dwivedi
 
